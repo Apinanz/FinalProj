@@ -61,11 +61,10 @@ public class ShowSolution extends JFrame {
             fireTableRowsDeleted(getRowCount(), getRowCount());
         }
     }
-    int round = 0, index = -1;
+    int round = 0;
     double sumWeight = 0;
     JLabel answerLabel = new JLabel();
     Vertex start;
-    JPanel panel;
     JScrollPane scroll;
     Model model;
     JTable primTable;
@@ -79,8 +78,6 @@ public class ShowSolution extends JFrame {
     private LinkedList<Vertex> A = new LinkedList<>();
     private LinkedList<Vertex> N = new LinkedList<>();
     private Vertex u;
-    private Vertex v;
-    private Edge_ uw;
     private Canvas c;
     Font sanSerifFont = new Font("SanSerif", Font.PLAIN, 24);
     Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -96,6 +93,12 @@ public class ShowSolution extends JFrame {
                 draw();
             }
         };
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                System.exit(0);
+            }
+        });
         for (Edge_ edge : e) {
             Edge_s.add(edge);
         }
@@ -145,11 +148,9 @@ public class ShowSolution extends JFrame {
         graph.setFont(sanSerifFont);
         graph.setBounds((screenSize.width - getWidth()) - 400 + shift, 100, 300, 23);
         getContentPane().add(graph);
-//        graph.addActionListener(this::graphButtAction);
         graph.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent a) {
-//                graphButtAction(a);
                 graph.setVisible(false);
                 graph.setVisible(true);
                 scroll.setVisible(false);
@@ -171,37 +172,20 @@ public class ShowSolution extends JFrame {
         next.setBounds((screenSize.width - getWidth()) - 400 + shift, 280, 300, 23);
         getContentPane().add(next);
         next.addActionListener((ActionEvent e1) -> {
-            setTableNext();
-            
-            JTable tables = new JTable(model);
-            tables.setFont(sanSerifFont);
-            tables.setRowHeight(30);
-            tables.getTableHeader().setReorderingAllowed(false);
-            tables.setAutoscrolls(true);
-//                tableScroll = new JScrollPane(table);
-//                tableScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-//                tableScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-//                tableScroll.setBounds(0,0,screenSize.width-400,screenSize.height);
-JScrollPane scrolls = new JScrollPane(tables);
-scrolls.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-scrolls.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-scrolls.setBounds(0, 0, screenSize.width - 400, screenSize.height);
-scroll.setViewportView(scrolls);
-draw();
+        primAlgorithm();
+
+        JTable tables = new JTable(model);
+        tables.setFont(sanSerifFont);
+        tables.setRowHeight(30);
+        tables.getTableHeader().setReorderingAllowed(false);
+        tables.setAutoscrolls(true);
+        JScrollPane scrolls = new JScrollPane(tables);
+        scrolls.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrolls.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrolls.setBounds(0, 0, screenSize.width - 400, screenSize.height);
+        scroll.setViewportView(scrolls);
+        draw();
         });
-//        table.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent a) {
-////                tableButtAction(a);
-//
-//                Graphics2D g = (Graphics2D)c.getGraphics();
-//                g.setColor(Color.white);
-//                g.fillRect(0, 0, getWidth(), getHeight());
-//                scroll.setVisible(true);
-//                c.setVisible(false);
-////                draw();
-//            }
-//        });
         c.setBackground(Color.white);
         menubar.setBackground(Color.cyan);
         menubar.setBounds((screenSize.width - getWidth()) - 400, 0, 400, (screenSize.height - getHeight()));
@@ -209,7 +193,6 @@ draw();
         setBounds(0, 0, (screenSize.width - getWidth()), (screenSize.height - getHeight()));
         add(c);
         add(menubar);
-//        c.setVisible(false);
         show();
     }
     
@@ -226,46 +209,40 @@ draw();
         setVisible(false);
     }
 
-    public void setTableNext() {
+    public void primAlgorithm() {
         if (round == Vertexs.size() - 1) {
             return;
         }
-        if (index == -1 && round == 0) {
+        if (round == 0) {
             u = start;
-            
-        }else{
-        u = Vertexs.get(index);
-            
+            N.addLast(u);
+            A.remove(u);
         }
+        Edge_ uw = null;
+        Vertex v = null;
         model.setValueAt(u.name, round, 0);
         double minWeight = Double.MAX_VALUE;
-        int nextIndex = 0;
-        A.remove(u);
-        N.addLast(u);
         for (int j = 0; j < Vertexs.size(); j++) {
-            ArrayList<Edge_> tempEdge = new ArrayList<>();
-            ArrayList<Vertex> tempVertex = new ArrayList<>();
+            Edge_ ed = null;
             Vertex w = Vertexs.get(j);
-            int index;
             for (Edge_ t : Edge_s) {
-                if ((t.vertexA == u || t.vertexB == u)&&!T.contains(t)) {
-                    tempEdge.add(t);
-                    tempVertex.add(t.vertexA == u ? t.vertexB : t.vertexA);
+                if (((t.vertexA == u && t.vertexB == w) || (t.vertexA == w && t.vertexB == u))&&!T.contains(t)) {
+                    ed = t;
+                    break;
                 }
             }
             if (N.contains(w)) {
                 model.setValueAt("-", round, j + 1);
-            } else if (tempVertex.contains(w)) {
-                index = tempVertex.indexOf(w);
-                double weight = Double.parseDouble(tempEdge.get(index).weight);
-                double previousWeight = Double.MAX_VALUE;
+            } else if (ed!=null) {
+                double weight = Double.parseDouble(ed.weight);
+                double preWeight = Double.MAX_VALUE;
                 if (round > 0 && model.getValueAt(round - 1, j + 1).toString().length() > 1) {
                     String upper = model.getValueAt(round - 1, j + 1).toString();
                     String prev = upper.substring(0, upper.indexOf(","));
-                    previousWeight = Double.parseDouble(prev);
+                    preWeight = Double.parseDouble(prev);
                 }
                 if ((round > 0 && model.getValueAt(round - 1, j + 1).equals(Character.toString('\u221E')))
-                        || weight < previousWeight) {
+                        || weight < preWeight) {
                     model.setValueAt(weight + ", " + u.name, round, j + 1);
                 } else {
                     model.setValueAt(model.getValueAt(round - 1, j + 1), round, j + 1);
@@ -277,8 +254,7 @@ draw();
                     model.setValueAt(Character.toString('\u221E'), round, j + 1);
                 }
             }
-            if (model.getValueAt(round, j + 1).toString().equals("-")
-                    || model.getValueAt(round, j + 1).toString().equals(Character.toString('\u221E'))) {
+            if (model.getValueAt(round, j + 1).toString().length()==1) {
                 continue;
             }
             String currentSlot = model.getValueAt(round, j + 1).toString();
@@ -286,24 +262,15 @@ draw();
             double currentWeight = Double.parseDouble(current);
             if (currentWeight < minWeight) {
                 minWeight = currentWeight;
-                nextIndex = j;
-                boolean found = false;
-                for (Vertex x : Vertexs) {
-                    for (Edge_ e : Edge_s) {
-                        if (((e.vertexA == x && e.vertexB == w)
-                                || (e.vertexA == w && e.vertexB == x)) &&!T.contains(e)
-                                && Integer.parseInt(e.weight) == minWeight
-                                && (x.name.equals(currentSlot.substring(currentSlot.indexOf(",") + 2)))) {
-                            uw = e;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (found) {
+                v = w;
+                String target = currentSlot.substring(currentSlot.indexOf(",")+2);
+                for(Edge_ e : Edge_s){
+                    if(!T.contains(e)&&((e.vertexA.name.equals(target)&&e.vertexB.name.equals(w.name))||
+                                        (e.vertexB.name.equals(target)&&e.vertexA.name.equals(w.name)))){
+                        uw = e;
                         break;
                     }
                 }
-                v = uw.vertexA == u ? uw.vertexB : uw.vertexA;
             }
         }
         sumWeight += minWeight;
@@ -311,8 +278,10 @@ draw();
 
             uw.isSelect = true;
         }
+        u = v;
+        A.remove(v);
+        N.addLast(v);
         T.addLast(uw);
-        index = nextIndex;
         round++;
         String text = "<html>";
         text += "<CENTER>Total weight of</CENTER>";
@@ -340,7 +309,7 @@ draw();
     }
 
     public void nextButtAction(ActionEvent ae) {
-        setTableNext();
+        primAlgorithm();
     }
 
     public void draw() {
